@@ -1,0 +1,7 @@
+data/
+torch_cache/
+mmsegmentation/
+singularity-cache/
+logs/
+results/
+*.out
