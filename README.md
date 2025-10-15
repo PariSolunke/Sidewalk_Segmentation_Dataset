@@ -62,7 +62,7 @@ CONTAINER=/home/pss442/mmseg.sif
 ```
 
 ### Important: Workspace Path Binding
-⚠️ **Critical Configuration**: The `WORKSPACE` variable in your shell scripts must match the bind mount path.
+**Critical Configuration**: The `WORKSPACE` variable in your shell scripts must match the bind mount path.
 
 In your `.sh` scripts, ensure consistency:
 ```bash
