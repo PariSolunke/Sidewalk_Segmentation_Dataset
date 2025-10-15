@@ -125,14 +125,44 @@ def create_config(args):
     base_cfg_path = f"/workspace/mmsegmentation/configs/{MODEL_CONFIGS[args.model]['base']}"
     cfg = Config.fromfile(base_cfg_path)
         
-    # Update number of classes
-    cfg.model.decode_head.num_classes = args.num_classes
+    # Update number of classes for decode heads
+    # 
+    if isinstance(cfg.model.decode_head, list):
+        for decode_head in cfg.model.decode_head:
+            decode_head.num_classes = args.num_classes
+    else:
+        cfg.model.decode_head.num_classes = args.num_classes
+
+    # Update number of classes for auxiliary heads
     if hasattr(cfg.model, 'auxiliary_head') and cfg.model.auxiliary_head is not None:
-        cfg.model.auxiliary_head.num_classes = args.num_classes
+        # Handle both single auxiliary head and list of auxiliary heads
+        if isinstance(cfg.model.auxiliary_head, list):
+            for aux_head in cfg.model.auxiliary_head:
+                aux_head.num_classes = args.num_classes
+        else:
+            cfg.model.auxiliary_head.num_classes = args.num_classes
     
     # Load pretrained checkpoint
     if getattr(args, 'use_pretrained', True):
         cfg.load_from = MODEL_CONFIGS[args.model]['checkpoint']
+        
+        # For SETR models, also set the backbone checkpoint path
+        if args.model in ['setr_pup', 'setr_mla']:
+            if hasattr(cfg.model, 'backbone'):
+                # Update or create backbone init_cfg
+                if hasattr(cfg.model.backbone, 'init_cfg') and cfg.model.backbone.init_cfg is not None:
+                    if isinstance(cfg.model.backbone.init_cfg, dict):
+                        cfg.model.backbone.init_cfg['checkpoint'] = '/workspace/pretrain/vit_large_p16.pth'
+                    else:
+                        cfg.model.backbone.init_cfg = dict(
+                            type='Pretrained',
+                            checkpoint='/workspace/pretrain/vit_large_p16.pth'
+                        )
+                else:
+                    cfg.model.backbone.init_cfg = dict(
+                        type='Pretrained',
+                        checkpoint='/workspace/pretrain/vit_large_p16.pth'
+                    )
     
     # Update dataset paths
     cfg.train_dataloader.dataset.type = 'SidewalkDataset'
@@ -304,7 +334,7 @@ def main():
     
     # Model selection
     parser.add_argument('--model', type=str, required=True,
-                        choices=['deeplabv3plus_r50', 'deeplabv3plus_r101', 'hrnet_w18', 'hrnet_w48' , 'pspnet_r50', 'pspnet_r101', 'ocrnet', 'segformer_b0', 'segformer_b5', 'swin_b', 'swin_t' 'setr_pup', 'setr_mla', 'mask2former_r101', 'mask2former_swins' ],
+                        choices=['deeplabv3plus_r50', 'deeplabv3plus_r101', 'hrnet_w18', 'hrnet_w48' , 'pspnet_r50', 'pspnet_r101', 'ocrnet', 'segformer_b0', 'segformer_b5', 'swin_b', 'swin_t', 'setr_pup', 'setr_mla', 'mask2former_r101', 'mask2former_swins' ],
                         help='Model architecture to use')
     
     # Data paths

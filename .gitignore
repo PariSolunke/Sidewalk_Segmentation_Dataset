@@ -5,3 +5,4 @@ singularity-cache/
 logs/
 results/
 *.out
+pretrain/

@@ -8,9 +8,9 @@
 #SBATCH --job-name=cvpr_dataset_train
 #SBATCH --output=logs/mmseg_%x_%j.out
 #SBATCH --error=logs/mmseg_%x_%j.err
-#SBATCH --account=YOUR_ACCOUNT_HERE
+#SBATCH --account=YOUR ACCOUNT HERE
 
-
+#update the account above (if needed by your slurm settings)
 
 
 
@@ -21,8 +21,10 @@ echo "Node: $SLURM_NODELIST"
 echo "=================================================="
 
 # Paths
-
+#downlaod the container and update the container path here
 CONTAINER=/home/pss442/mmseg.sif
+
+#set your workspace to the cloned repo
 WORKSPACE=/scratch/$USER/Sidewalk_Dataset
 
 # Clear Python environment variables
@@ -38,12 +40,12 @@ DATA_ROOT="/workspace/data"
 RESULTS_DIR="/workspace/results"
 BATCH_SIZE=8
 NUM_WORKERS=4
-MAX_ITERS=4000
-VAL_INTERVAL=500
+MAX_ITERS=2000
+VAL_INTERVAL=250
 LR=0
 IMG_SIZE=512
 NUM_CLASSES=4
-MODEL="deeplabv3plus_r101" 
+MODEL="deeplabv3plus_r101"  # Options: deeplabv3plus_r50, deeplabv3plus_r101, hrnet_w18, hrnet_w48, pspnet_r50, pspnet_r101, ocrnet, segformer_b0, segformer_b5, swin_b, swin_t, setr_pup, setr_mla, mask2former_r101, mask2former_swins
 
 echo "Configuration:"
 echo "  Model: $MODEL"
@@ -53,6 +55,34 @@ echo "  Batch size: $BATCH_SIZE"
 echo "  Max iterations: $MAX_ITERS"
 echo "  Image size: $IMG_SIZE"
 echo ""
+
+# Setup SETR pretrained weights if needed
+if [[ "$MODEL" == "setr_pup" ]] || [[ "$MODEL" == "setr_mla" ]]; then
+    echo "Setting up SETR pretrained weights..."
+    
+    # Create pretrain directory
+    mkdir -p $WORKSPACE/pretrain
+    
+    # Check if converted checkpoint exists
+    if [ ! -f "$WORKSPACE/pretrain/vit_large_p16.pth" ]; then
+        echo "Downloading and converting ViT checkpoint..."
+        
+        # Download original checkpoint
+        if [ ! -f "$WORKSPACE/pretrain/jx_vit_large_p16_384-b3be5167.pth" ]; then
+            wget -P $WORKSPACE/pretrain https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-vitjx/jx_vit_large_p16_384-b3be5167.pth
+        fi
+        
+        # Convert downloaded VIT weights to mmseg checkpoint
+        singularity exec --nv \
+            --containall \
+            --bind "$WORKSPACE:/workspace" \
+            $CONTAINER python /workspace/mmsegmentation/tools/model_converters/vit2mmseg.py \
+            /workspace/pretrain/jx_vit_large_p16_384-b3be5167.pth \
+            /workspace/pretrain/vit_large_p16.pth
+    else
+        echo "Converted ViT checkpoint already exists, skipping download."
+    fi
+fi
 
 # Run training
 singularity exec --nv \

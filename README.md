@@ -56,7 +56,7 @@ The pipeline supports the following pre-trained models:
 - CUDA-capable GPU
 
 ### Singularity Container
-You need the MMSegmentation Singularity container(TBA). Update the path in your scripts:
+You need the MMSegmentation Singularity container(TBA). Download and update the path in the slurm script:
 ```bash
 CONTAINER=/home/pss442/mmseg.sif
 ```
